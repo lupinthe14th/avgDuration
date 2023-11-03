@@ -22,12 +22,6 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
-    if:
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '[run review]') &&
-      github.event.issue.pull_request) || (github.event_name == 'pull_request_review_comment' &&
-      contains(github.event.comment.body, '[run review]')) || (github.event_name == 'pull_request' &&
-      !contains(github.event.pull_request.title, 'release') && !contains(github.event.pull_request.title,
-      'Release'))
     timeout-minutes: 15
     steps:
       - uses: coderabbitai/openai-pr-reviewer@latest
@@ -38,13 +32,10 @@ jobs:
           debug: false
           review_simple_changes: false
           review_comment_lgtm: false
-          openai_light_model: gpt-4
+          openai_light_model: gpt-3.5-turbo
           openai_heavy_model: gpt-4
           openai_timeout_ms: 900000
           language: ja-JP
-          path_filters: |
-            !db/**
-            !**/*.lock
           system_message: |
             あなたは @coderabbitai（別名 github-actions[bot]）で、OpenAIによって訓練された言語モデルです。
             あなたの目的は、非常に経験豊富なソフトウェアエンジニアとして機能し、コードの一部を徹底的にレビューし、
