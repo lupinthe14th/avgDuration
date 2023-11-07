@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"time"
 )
@@ -29,16 +30,41 @@ func main() {
 		return
 	}
 
-	var totalDuration time.Duration
+	var (
+		totalDuration time.Duration
+		minDuration   = time.Duration(math.MaxInt64)
+		maxDuration   time.Duration
+		taskCount     int
+	)
+
 	for _, taskGroup := range tasks {
 		for _, task := range taskGroup {
-			started, _ := time.Parse(time.RFC3339Nano, task.StartedAt)
-			created, _ := time.Parse(time.RFC3339Nano, task.CreatedAt)
+			started, errStart := time.Parse(time.RFC3339Nano, task.StartedAt)
+			created, errCreated := time.Parse(time.RFC3339Nano, task.CreatedAt)
+			if errStart != nil || errCreated != nil {
+				fmt.Println("Error parsing dates:", errStart, errCreated)
+				continue // Skip this task if there's an error parsing dates
+			}
 			duration := started.Sub(created)
+
+			if duration < minDuration {
+				minDuration = duration
+			}
+			if duration > maxDuration {
+				maxDuration = duration
+			}
 			totalDuration += duration
+			taskCount++
 		}
 	}
 
-	averageDuration := totalDuration / time.Duration(len(tasks)*len(tasks[0]))
+	if taskCount == 0 {
+		fmt.Println("No tasks to process.")
+		return
+	}
+
+	averageDuration := totalDuration / time.Duration(taskCount)
 	fmt.Println("Average duration:", averageDuration)
+	fmt.Println("Minimum duration:", minDuration)
+	fmt.Println("Maximum duration:", maxDuration)
 }
