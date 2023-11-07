@@ -20,14 +20,14 @@ func main() {
 	inputData, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		fmt.Println("Error reading from stdin:", err)
-		return
+		os.Exit(1)
 	}
 
 	var tasks [][]Task
 	err = json.Unmarshal([]byte(inputData), &tasks)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return
+		os.Exit(1)
 	}
 
 	var (
@@ -60,7 +60,7 @@ func main() {
 
 	if taskCount == 0 {
 		fmt.Println("No tasks to process.")
-		return
+		os.Exit(1)
 	}
 
 	averageDuration := totalDuration / time.Duration(taskCount)
