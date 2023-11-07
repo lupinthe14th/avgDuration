@@ -20,7 +20,7 @@ func parseTasks(input []byte) ([][]Task, error) {
 	var tasks [][]Task
 	err := json.Unmarshal(input, &tasks)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse tasks: %w", err)
 	}
 	return tasks, nil
 }
