@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"os"
 	"time"
@@ -19,15 +20,13 @@ func main() {
 	// Read from standard input
 	inputData, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		fmt.Println("Error reading from stdin:", err)
-		os.Exit(1)
+		log.Fatalf("Error reading from stdin: %s", err)
 	}
 
 	var tasks [][]Task
 	err = json.Unmarshal([]byte(inputData), &tasks)
 	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
+		log.Fatalf("Error: %s", err)
 	}
 
 	var (
@@ -39,11 +38,13 @@ func main() {
 
 	for _, taskGroup := range tasks {
 		for _, task := range taskGroup {
-			started, errStart := time.Parse(time.RFC3339Nano, task.StartedAt)
-			created, errCreated := time.Parse(time.RFC3339Nano, task.CreatedAt)
-			if errStart != nil || errCreated != nil {
-				fmt.Println("Error parsing dates:", errStart, errCreated)
-				continue // Skip this task if there's an error parsing dates
+			started, err := time.Parse(time.RFC3339Nano, task.StartedAt)
+			if err != nil {
+				log.Fatalf("Error parsing dates for StartedAt: %s", err)
+			}
+			created, err := time.Parse(time.RFC3339Nano, task.CreatedAt)
+			if err != nil {
+				log.Fatalf("Error parsing dates for CreatedAt: %s", err)
 			}
 			duration := started.Sub(created)
 
@@ -59,8 +60,7 @@ func main() {
 	}
 
 	if taskCount == 0 {
-		fmt.Println("No tasks to process.")
-		os.Exit(1)
+		log.Fatalln("No tasks to process.")
 	}
 
 	averageDuration := totalDuration / time.Duration(taskCount)
