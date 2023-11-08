@@ -25,6 +25,10 @@ func parseTasks(input []byte) ([][]Task, error) {
 	return tasks, nil
 }
 
+func parseTime(input string) (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, input)
+}
+
 func main() {
 	// Read from standard input
 	inputData, err := io.ReadAll(os.Stdin)
@@ -46,11 +50,11 @@ func main() {
 
 	for _, taskGroup := range tasks {
 		for _, task := range taskGroup {
-			started, err := time.Parse(time.RFC3339Nano, task.StartedAt)
+			started, err := parseTime(task.StartedAt)
 			if err != nil {
 				log.Fatalf("Error parsing dates for StartedAt: %s", err)
 			}
-			created, err := time.Parse(time.RFC3339Nano, task.CreatedAt)
+			created, err := parseTime(task.CreatedAt)
 			if err != nil {
 				log.Fatalf("Error parsing dates for CreatedAt: %s", err)
 			}
