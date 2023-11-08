@@ -3,6 +3,7 @@ package main
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestParseTasks(t *testing.T) {
@@ -29,6 +30,34 @@ func TestParseTasks(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseTasks() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseTime(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		in      string
+		want    time.Time
+		wantErr bool
+	}{
+		{name: "empty check", in: "", want: time.Time{}, wantErr: true},
+		{name: "invalid check", in: "invalid", want: time.Time{}, wantErr: true},
+		{name: "valid check", in: "2021-08-01T00:00:00Z", want: time.Date(2021, 8, 1, 0, 0, 0, 0, time.UTC), wantErr: false},
+		{name: "valid check with nanoseconds", in: "2021-08-01T00:00:00.123456789Z", want: time.Date(2021, 8, 1, 0, 0, 0, 123456789, time.UTC), wantErr: false},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseTime(tt.in)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseTime() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("parseTime() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
