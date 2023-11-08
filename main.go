@@ -16,6 +16,15 @@ type Task struct {
 	TaskArn   string `json:"taskArn"`
 }
 
+func parseTasks(input []byte) ([][]Task, error) {
+	var tasks [][]Task
+	err := json.Unmarshal(input, &tasks)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse tasks: %w", err)
+	}
+	return tasks, nil
+}
+
 func main() {
 	// Read from standard input
 	inputData, err := io.ReadAll(os.Stdin)
@@ -23,10 +32,9 @@ func main() {
 		log.Fatalf("Error reading from stdin: %s", err)
 	}
 
-	var tasks [][]Task
-	err = json.Unmarshal([]byte(inputData), &tasks)
+	tasks, err := parseTasks(inputData)
 	if err != nil {
-		log.Fatalf("Error: %s", err)
+		log.Fatalf("Error parsing tasks: %s", err)
 	}
 
 	var (
@@ -48,12 +56,8 @@ func main() {
 			}
 			duration := started.Sub(created)
 
-			if duration < minDuration {
-				minDuration = duration
-			}
-			if duration > maxDuration {
-				maxDuration = duration
-			}
+			minDuration = min(duration, minDuration)
+			maxDuration = max(duration, maxDuration)
 			totalDuration += duration
 			taskCount++
 		}
