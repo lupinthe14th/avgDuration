@@ -40,7 +40,7 @@ func calculateDurations(tasks [][]Task) (time.Duration, time.Duration, time.Dura
 		first         = true
 	)
 
-	if tasks == nil || len(tasks) == 0 {
+	if len(tasks) == 0 {
 		return 0, 0, 0, 0, fmt.Errorf("no tasks to process")
 	}
 	for _, taskGroup := range tasks {
