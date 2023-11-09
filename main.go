@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"os"
 	"time"
 )
@@ -16,6 +15,7 @@ type Task struct {
 	TaskArn   string `json:"taskArn"`
 }
 
+// parseTasks parses a JSON array of tasks.
 func parseTasks(input []byte) ([][]Task, error) {
 	var tasks [][]Task
 	err := json.Unmarshal(input, &tasks)
@@ -25,12 +25,54 @@ func parseTasks(input []byte) ([][]Task, error) {
 	return tasks, nil
 }
 
+// parseTime parses a time string in RFC3339Nano format.
 func parseTime(input string) (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, input)
 }
 
+// calculateDurations calculates the total, minimum, and maximum durations of the tasks.
+func calculateDurations(tasks [][]Task) (time.Duration, time.Duration, time.Duration, int, error) {
+	var (
+		totalDuration time.Duration
+		minDuration   time.Duration
+		maxDuration   time.Duration
+		taskCount     int
+		first         = true
+	)
+
+	if tasks == nil || len(tasks) == 0 {
+		return 0, 0, 0, 0, fmt.Errorf("no tasks to process")
+	}
+	for _, taskGroup := range tasks {
+		for _, task := range taskGroup {
+			started, err := parseTime(task.StartedAt)
+			if err != nil {
+				return 0, 0, 0, 0, fmt.Errorf("error parsing StartedAt: %w", err)
+			}
+			created, err := parseTime(task.CreatedAt)
+			if err != nil {
+				return 0, 0, 0, 0, fmt.Errorf("error parsing CreatedAt: %w", err)
+			}
+			if started.Before(created) {
+				return 0, 0, 0, 0, fmt.Errorf("started time is before created time")
+			}
+			duration := started.Sub(created)
+			if first || duration < minDuration {
+				minDuration = duration
+			}
+			if duration > maxDuration {
+				maxDuration = duration
+			}
+			totalDuration += duration
+			taskCount++
+			first = false
+		}
+	}
+
+	return totalDuration, minDuration, maxDuration, taskCount, nil
+}
+
 func main() {
-	// Read from standard input
 	inputData, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		log.Fatalf("Error reading from stdin: %s", err)
@@ -41,30 +83,9 @@ func main() {
 		log.Fatalf("Error parsing tasks: %s", err)
 	}
 
-	var (
-		totalDuration time.Duration
-		minDuration   = time.Duration(math.MaxInt64)
-		maxDuration   time.Duration
-		taskCount     int
-	)
-
-	for _, taskGroup := range tasks {
-		for _, task := range taskGroup {
-			started, err := parseTime(task.StartedAt)
-			if err != nil {
-				log.Fatalf("Error parsing dates for StartedAt: %s", err)
-			}
-			created, err := parseTime(task.CreatedAt)
-			if err != nil {
-				log.Fatalf("Error parsing dates for CreatedAt: %s", err)
-			}
-			duration := started.Sub(created)
-
-			minDuration = min(duration, minDuration)
-			maxDuration = max(duration, maxDuration)
-			totalDuration += duration
-			taskCount++
-		}
+	totalDuration, minDuration, maxDuration, taskCount, err := calculateDurations(tasks)
+	if err != nil {
+		log.Fatalf("Error calculating durations: %s", err)
 	}
 
 	if taskCount == 0 {

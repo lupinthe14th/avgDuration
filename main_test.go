@@ -62,3 +62,48 @@ func TestParseTime(t *testing.T) {
 		})
 	}
 }
+
+func TestCalculateDurations(t *testing.T) {
+	t.Parallel()
+	type out struct {
+		totalDuration time.Duration
+		minDuration   time.Duration
+		maxDuration   time.Duration
+		taskCount     int
+	}
+	tests := []struct {
+		name    string
+		in      [][]Task
+		want    out
+		wantErr bool
+	}{
+		{name: "nil check", in: nil, want: out{0, 0, 0, 0}, wantErr: true},
+		{name: "empty check", in: [][]Task{}, want: out{0, 0, 0, 0}, wantErr: true},
+		{name: "started at parse error", in: [][]Task{{{StartedAt: "invalid", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
+		{name: "created at parse error", in: [][]Task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "invalid", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
+		{name: "started time is after created time", in: [][]Task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-07-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-07-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
+		{name: "valid check", in: [][]Task{{{StartedAt: "2021-08-01T00:00:10Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:11Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{21 * time.Second, 10 * time.Second, 11 * time.Second, 2}, wantErr: false},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			totalDuration, minDuration, maxDuration, taskCount, err := calculateDurations(tt.in)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("calculateDurations() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if totalDuration != tt.want.totalDuration {
+				t.Errorf("calculateDurations() totalDuration = %v, want %v", totalDuration, tt.want.totalDuration)
+			}
+			if minDuration != tt.want.minDuration {
+				t.Errorf("calculateDurations() minDuration = %v, want %v", minDuration, tt.want.minDuration)
+			}
+			if maxDuration != tt.want.maxDuration {
+				t.Errorf("calculateDurations() maxDuration = %v, want %v", maxDuration, tt.want.maxDuration)
+			}
+			if taskCount != tt.want.taskCount {
+				t.Errorf("calculateDurations() taskCount = %v, want %v", taskCount, tt.want.taskCount)
+			}
+		})
+	}
+}
