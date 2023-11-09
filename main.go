@@ -45,6 +45,12 @@ func calculateDurations(tasks [][]Task) (time.Duration, time.Duration, time.Dura
 	}
 	for _, taskGroup := range tasks {
 		for _, task := range taskGroup {
+			if task.StartedAt == "" {
+				return 0, 0, 0, 0, fmt.Errorf("task has no StartedAt time")
+			}
+			if task.CreatedAt == "" {
+				return 0, 0, 0, 0, fmt.Errorf("task has no CreatedAt time")
+			}
 			started, err := parseTime(task.StartedAt)
 			if err != nil {
 				return 0, 0, 0, 0, fmt.Errorf("error parsing StartedAt: %w", err)
