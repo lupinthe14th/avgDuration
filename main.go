@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 )
@@ -79,23 +79,29 @@ func calculateDurations(tasks [][]Task) (time.Duration, time.Duration, time.Dura
 }
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	inputData, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		log.Fatalf("Error reading from stdin: %s", err)
+		logger.Error("Error reading from stdin: %s", err)
+		os.Exit(1)
 	}
 
 	tasks, err := parseTasks(inputData)
 	if err != nil {
-		log.Fatalf("Error parsing tasks: %s", err)
+		logger.Error("Error parsing tasks: %s", err)
+		os.Exit(1)
 	}
 
 	totalDuration, minDuration, maxDuration, taskCount, err := calculateDurations(tasks)
 	if err != nil {
-		log.Fatalf("Error calculating durations: %s", err)
+		logger.Error("Error calculating durations: %s", err)
+		os.Exit(1)
 	}
 
 	if taskCount == 0 {
-		log.Fatalln("No tasks to process.")
+		logger.Error("No tasks to process.")
+		os.Exit(1)
 	}
 
 	averageDuration := totalDuration / time.Duration(taskCount)
