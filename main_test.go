@@ -11,13 +11,13 @@ func TestParseTasks(t *testing.T) {
 	tests := []struct {
 		name    string
 		in      []byte
-		want    [][]Task
+		want    [][]task
 		wantErr bool
 	}{
 		{name: "nil check", in: nil, want: nil, wantErr: true},
 		{name: "empty check", in: []byte{}, want: nil, wantErr: true},
 		{name: "invalid json", in: []byte("invalid"), want: nil, wantErr: true},
-		{name: "valid json", in: []byte(`[[{"startedAt":"2021-08-01T00:00:00Z","createdAt":"2021-08-01T00:00:00Z","taskArn":"arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"},{"startedAt":"2021-08-01T00:00:00Z","createdAt":"2021-08-01T00:00:00Z","taskArn":"arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}]]`), want: [][]Task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, wantErr: false},
+		{name: "valid json", in: []byte(`[[{"startedAt":"2021-08-01T00:00:00Z","createdAt":"2021-08-01T00:00:00Z","taskArn":"arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"},{"startedAt":"2021-08-01T00:00:00Z","createdAt":"2021-08-01T00:00:00Z","taskArn":"arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}]]`), want: [][]task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -67,24 +67,24 @@ func TestCalculateDurations(t *testing.T) {
 	t.Parallel()
 	type out struct {
 		totalDuration time.Duration
-		minDuration   time.Duration
-		maxDuration   time.Duration
+		minDuration   taskLaunchDetails
+		maxDuration   taskLaunchDetails
 		taskCount     int
 	}
 	tests := []struct {
 		name    string
-		in      [][]Task
+		in      [][]task
 		want    out
 		wantErr bool
 	}{
-		{name: "nil check", in: nil, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "empty check", in: [][]Task{}, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "started at is empty", in: [][]Task{{{StartedAt: "", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "created at is empty", in: [][]Task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "started at parse error", in: [][]Task{{{StartedAt: "invalid", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "created at parse error", in: [][]Task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "invalid", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "started time is after created time", in: [][]Task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-07-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-07-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, 0, 0, 0}, wantErr: true},
-		{name: "valid check", in: [][]Task{{{StartedAt: "2021-08-01T00:00:10Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:11Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{21 * time.Second, 10 * time.Second, 11 * time.Second, 2}, wantErr: false},
+		{name: "nil check", in: nil, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "empty check", in: [][]task{}, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "started at is empty", in: [][]task{{{StartedAt: "", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "created at is empty", in: [][]task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "started at parse error", in: [][]task{{{StartedAt: "invalid", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "created at parse error", in: [][]task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "invalid", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "started time is after created time", in: [][]task{{{StartedAt: "2021-08-01T00:00:00Z", CreatedAt: "2021-07-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-07-01T00:00:00Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{0, taskLaunchDetails{}, taskLaunchDetails{}, 0}, wantErr: true},
+		{name: "valid check", in: [][]task{{{StartedAt: "2021-08-01T00:00:10Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, {StartedAt: "2021-08-01T00:00:11Z", CreatedAt: "2021-08-01T00:00:00Z", TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}}}, want: out{21 * time.Second, taskLaunchDetails{Duration: 10 * time.Second, TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, taskLaunchDetails{Duration: 11 * time.Second, TaskArn: "arn:aws:ecs:us-east-1:123456789012:task/12345678901234567890123456789012"}, 2}, wantErr: false},
 	}
 	for _, tt := range tests {
 		tt := tt
