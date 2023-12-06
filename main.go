@@ -9,15 +9,20 @@ import (
 	"time"
 )
 
-type Task struct {
-	StartedAt string `json:"startedAt"`
-	CreatedAt string `json:"createdAt"`
-	TaskArn   string `json:"taskArn"`
+type task struct {
+	StartedAt time.Time `json:"startedAt"`
+	CreatedAt time.Time `json:"createdAt"`
+	TaskArn   string    `json:"taskArn"`
+}
+
+type taskLaunchDetails struct {
+	Duration time.Duration
+	TaskArn  string
 }
 
 // parseTasks parses a JSON array of tasks.
-func parseTasks(input []byte) ([][]Task, error) {
-	var tasks [][]Task
+func parseTasks(input []byte) ([][]task, error) {
+	var tasks [][]task
 	err := json.Unmarshal(input, &tasks)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse tasks: %w", err)
@@ -25,49 +30,44 @@ func parseTasks(input []byte) ([][]Task, error) {
 	return tasks, nil
 }
 
-// parseTime parses a time string in RFC3339Nano format.
-func parseTime(input string) (time.Time, error) {
-	return time.Parse(time.RFC3339Nano, input)
-}
-
 // calculateDurations calculates the total, minimum, and maximum durations of the tasks.
-func calculateDurations(tasks [][]Task) (time.Duration, time.Duration, time.Duration, int, error) {
+func calculateDurations(tasks [][]task) (time.Duration, taskLaunchDetails, taskLaunchDetails, int, error) {
 	var (
 		totalDuration time.Duration
-		minDuration   time.Duration
-		maxDuration   time.Duration
+		minDuration   taskLaunchDetails
+		maxDuration   taskLaunchDetails
 		taskCount     int
 		first         = true
 	)
 
 	if len(tasks) == 0 {
-		return 0, 0, 0, 0, fmt.Errorf("no tasks to process")
+		return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("no tasks to process")
 	}
 	for _, taskGroup := range tasks {
 		for _, task := range taskGroup {
-			if task.StartedAt == "" {
-				return 0, 0, 0, 0, fmt.Errorf("task has no StartedAt time")
+			if task.StartedAt == (time.Time{}) {
+				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("task has no StartedAt time")
 			}
-			if task.CreatedAt == "" {
-				return 0, 0, 0, 0, fmt.Errorf("task has no CreatedAt time")
+			if task.CreatedAt == (time.Time{}) {
+				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("task has no CreatedAt time")
 			}
-			started, err := parseTime(task.StartedAt)
-			if err != nil {
-				return 0, 0, 0, 0, fmt.Errorf("error parsing StartedAt: %w", err)
-			}
-			created, err := parseTime(task.CreatedAt)
-			if err != nil {
-				return 0, 0, 0, 0, fmt.Errorf("error parsing CreatedAt: %w", err)
-			}
+			started := task.StartedAt
+			created := task.CreatedAt
 			if started.Before(created) {
-				return 0, 0, 0, 0, fmt.Errorf("started time is before created time")
+				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("started time is before created time")
 			}
 			duration := started.Sub(created)
-			if first || duration < minDuration {
-				minDuration = duration
+			if first || duration < minDuration.Duration {
+				minDuration = taskLaunchDetails{
+					Duration: duration,
+					TaskArn:  task.TaskArn,
+				}
 			}
-			if duration > maxDuration {
-				maxDuration = duration
+			if duration > maxDuration.Duration {
+				maxDuration = taskLaunchDetails{
+					Duration: duration,
+					TaskArn:  task.TaskArn,
+				}
 			}
 			totalDuration += duration
 			taskCount++
@@ -106,6 +106,8 @@ func main() {
 
 	averageDuration := totalDuration / time.Duration(taskCount)
 	fmt.Println("Average duration:", averageDuration)
-	fmt.Println("Minimum duration:", minDuration)
-	fmt.Println("Maximum duration:", maxDuration)
+	fmt.Println("Minimum duration: ", minDuration.Duration)
+	fmt.Println("Maximum duration: ", maxDuration.Duration)
+	fmt.Println("Minimum task ARN: ", minDuration.TaskArn)
+	fmt.Println("Maximum task ARN: ", maxDuration.TaskArn)
 }
