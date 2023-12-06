@@ -10,9 +10,9 @@ import (
 )
 
 type task struct {
-	StartedAt string `json:"startedAt"`
-	CreatedAt string `json:"createdAt"`
-	TaskArn   string `json:"taskArn"`
+	StartedAt time.Time `json:"startedAt"`
+	CreatedAt time.Time `json:"createdAt"`
+	TaskArn   string    `json:"taskArn"`
 }
 
 type taskLaunchDetails struct {
@@ -30,11 +30,6 @@ func parseTasks(input []byte) ([][]task, error) {
 	return tasks, nil
 }
 
-// parseTime parses a time string in RFC3339Nano format.
-func parseTime(input string) (time.Time, error) {
-	return time.Parse(time.RFC3339Nano, input)
-}
-
 // calculateDurations calculates the total, minimum, and maximum durations of the tasks.
 func calculateDurations(tasks [][]task) (time.Duration, taskLaunchDetails, taskLaunchDetails, int, error) {
 	var (
@@ -50,20 +45,14 @@ func calculateDurations(tasks [][]task) (time.Duration, taskLaunchDetails, taskL
 	}
 	for _, taskGroup := range tasks {
 		for _, task := range taskGroup {
-			if task.StartedAt == "" {
+			if task.StartedAt == (time.Time{}) {
 				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("task has no StartedAt time")
 			}
-			if task.CreatedAt == "" {
+			if task.CreatedAt == (time.Time{}) {
 				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("task has no CreatedAt time")
 			}
-			started, err := parseTime(task.StartedAt)
-			if err != nil {
-				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("error parsing StartedAt: %w", err)
-			}
-			created, err := parseTime(task.CreatedAt)
-			if err != nil {
-				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("error parsing CreatedAt: %w", err)
-			}
+			started := task.StartedAt
+			created := task.CreatedAt
 			if started.Before(created) {
 				return 0, taskLaunchDetails{}, taskLaunchDetails{}, 0, fmt.Errorf("started time is before created time")
 			}
